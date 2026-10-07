@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Architect Pro | Editor Web</title>
+    <link rel="stylesheet" href="/static/style.css?v=3.0">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">Audio <span>Architect</span></div>
+            <nav id="sidebarNav">
+                <button data-target="yt-tab" class="active">🎵 YT Downloader</button>
+                <button data-target="sync-tab">☁️ Descargas Nube</button>
+                <button data-target="tools-tab">🛠️ Herramientas</button>
+            </nav>
+            <div style="margin-top: auto; padding-top: 2rem; border-top: 1px solid var(--border-glass); font-size: 0.8rem; color: var(--text-muted); text-align: center;">
+                Sincronización Local a GitHub
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="content-area">
+            
+            <!-- TAB 1: YOUTUBE DOWNLOADER -->
+            <div id="yt-tab" class="tab-content active">
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px;">
+                    <div>
+                        <h2>YouTube Downloader</h2>
+                        <p style="color: var(--text-muted);">Procesa audio de YT, aplica efectos anti-copyright y actualiza el DB.</p>
+                    </div>
+
+                </div>
+
+                <div class="glass-panel">
+                    <div class="grid-2">
+                        <div class="input-group">
+                            <label>Repositorio de Destino (Carpeta) <span class="help-icon" data-tooltip="Nombre de la carpeta de género donde se guardará (ej. salsa, pop, bachata).">?</span></label>
+                            <input type="text" id="folderName" placeholder="salsa" />
+                        </div>
+                        <div style="display: flex; align-items: flex-end; gap: 10px; margin-bottom: 1rem;">
+                            <button id="pasteJsonToggleBtn" class="btn btn-secondary" style="width: 100%;">📋 Pegar JSON</button>
+                            <label for="bulkUploadFile" class="btn btn-secondary" style="width: 100%;">📂 Cargar Bulk (.json)</label>
+                            <input type="file" id="bulkUploadFile" accept=".json" style="display:none;" />
+                        </div>
+                    </div>
+                </div>
+
+                <div id="pasteJsonBlock" class="glass-panel" style="display:none; background: rgba(56, 189, 248, 0.05); border-color: rgba(56, 189, 248, 0.2);">
+                    <h3 style="margin-top: 0;">📋 Pegar código JSON</h3>
+                    <textarea id="pasteJsonInput" style="height: 150px; font-family: monospace; resize: vertical;" placeholder='[&#10;  {&#10;    "url": "..."&#10;  }&#10;]'></textarea>
+                    <button id="loadPastedJsonBtn" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Cargar Tareas al Tablero</button>
+                </div>
+
+                <div class="tasks-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 id="queueTitle" style="margin: 0;">Cola de Tareas (0)</h3>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="addUrlBtn" class="btn btn-primary">+ Añadir Canción</button>
+                        <button id="clearTasksBtn" class="btn btn-danger">X Limpiar</button>
+                    </div>
+                </div>
+
+                <div id="emptyTasksState" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted); border: 2px dashed rgba(255,255,255,0.1); border-radius: 12px; margin-bottom: 20px; transition: all 200ms ease-out;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">🎵</div>
+                    <h3 style="color: var(--text-main); margin-bottom: 0.5rem;">No hay tareas pendientes</h3>
+                    <p style="font-size: 0.95rem;">Añade una canción o carga un archivo JSON para comenzar.</p>
+                </div>
+
+                <div id="tasksList" style="max-height: 55vh; overflow-y: auto; padding-right: 10px; margin-bottom: 20px; display: none;"></div>
+
+                <div class="glass-panel" style="display: flex; gap: 15px; align-items: center; background: rgba(56, 189, 248, 0.05); border-color: rgba(56, 189, 248, 0.2);">
+                    <button id="startProcessBtn" class="btn btn-primary" style="flex: 3; font-size: 1.1rem; padding: 1rem;">▶️ Iniciar Procesamiento</button>
+                    <button id="cancelProcessBtn" class="btn btn-danger" style="flex: 1; display: none; font-size: 1.1rem;">🛑 Cancelar</button>
+                    <div style="flex: 1; display: flex; align-items: center; gap: 5px;">
+                        <input type="checkbox" id="forceOverwrite" style="width: 20px; height: 20px; cursor: pointer;">
+                        <label for="forceOverwrite" style="cursor: pointer; font-size: 0.9rem; color: var(--text-muted);">Sobrescribir si ya existe</label>
+                    </div>
+                </div>
+                
+                <div class="console-box" id="ytConsole">Esperando tareas...</div>
+            </div>
+
+            <!-- TAB 2: CLOUD SYNC (Airtable / Baserow) -->
+            <div id="sync-tab" class="tab-content">
+                <h2>Descargador desde Nube (Airtable / Baserow)</h2>
+                <p style="color: var(--text-muted); margin-bottom: 20px;">Conéctate a tus bases de datos para descargar automáticamente los MP3 subidos a la nube hacia tu disco local.</p>
+                
+                <div class="grid-2">
+                    <!-- Profile Manager -->
+                    <div class="glass-panel">
+                        <h3>Gestor de Perfiles</h3>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Selecciona un perfil guardado para cargar sus credenciales automáticamente.</p>
+                        
+                        <div class="input-group">
+                            <select id="profileSelect">
+                                <option value="">-- Selecciona un perfil --</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="newProfileBtn" class="btn btn-secondary">Crear Nuevo Perfil</button>
+                            <button id="deleteProfileBtn" class="btn btn-danger">Borrar Perfil</button>
+                        </div>
+                    </div>
+
+                    <!-- Profile Editor -->
+                    <div class="glass-panel" id="profileEditor" style="opacity: 0.5; pointer-events: none;">
+                        <h3>Editar Perfil Activo</h3>
+                        <div class="input-group">
+                            <label>Nombre del Perfil</label>
+                            <input type="text" id="profName" placeholder="Ej. Cliente VIP">
+                        </div>
+                        
+                        <div style="background: rgba(56, 189, 248, 0.05); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.2); margin-bottom: 15px; margin-top: 15px;">
+                            <h4 style="margin: 0 0 5px 0; font-size: 0.95rem; color: var(--accent-cyan);">Mapeo de Columnas (Base de Datos)</h4>
+                            <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0; line-height: 1.4;">Escribe el nombre <strong>exacto</strong> que tienen las columnas en tu tabla de Airtable/Baserow para que el sistema sepa dónde buscar la información.</p>
+                        </div>
+                        <div class="grid-2">
+                            <div class="input-group">
+                                <label>Carpeta Destino Local <span class="help-icon" data-tooltip="Donde se guardarán los MP3 descargados (Ej. salsa, pop, rock).">?</span></label>
+                                <input type="text" id="profTargetFolder" placeholder="salsa">
+                            </div>
+                            <div class="input-group">
+                                <label>Nombre Columna: Audio <span class="help-icon" data-tooltip="La columna que contiene el archivo MP3 (Ej. 'Ringtone' o 'Archivo Audio').">?</span></label>
+                                <input type="text" id="profColAudio" placeholder="Ringtone">
+                            </div>
+                            <div class="input-group">
+                                <label>Nombre Columna: Artista <span class="help-icon" data-tooltip="La columna con el nombre del artista (Ej. 'Subtitle' o 'Artista').">?</span></label>
+                                <input type="text" id="profColArtist" placeholder="Subtitle">
+                            </div>
+                            <div class="input-group">
+                                <label>Nombre Columna: Título <span class="help-icon" data-tooltip="La columna con el nombre de la canción (Ej. 'Title' o 'Nombre Cancion').">?</span></label>
+                                <input type="text" id="profColTitle" placeholder="Title">
+                            </div>
+                            <div class="input-group" style="grid-column: span 2;">
+                                <label>Nombre Columna: Portada (Opcional) <span class="help-icon" data-tooltip="La columna que contiene la imagen de la canción (Ej. 'Icon' o 'Portada').">?</span></label>
+                                <input type="text" id="profColIcon" placeholder="Icon">
+                            </div>
+                        </div>
+
+                        <button id="saveProfileBtn" class="btn btn-primary" style="width: 100%; margin-top: 10px;">💾 Guardar Cambios</button>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <!-- Airtable Config -->
+                    <div class="glass-panel">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3>Airtable</h3>
+                            <button id="runAirtableBtn" class="btn btn-success">▶️ Descargar Canciones</button>
+                        </div>
+                        <div class="input-group" style="margin-top: 15px;">
+                            <label>Token</label>
+                            <input type="password" id="profAtToken" placeholder="pat...">
+                        </div>
+                        <div class="input-group">
+                            <label>Base ID</label>
+                            <input type="text" id="profAtBase" placeholder="app...">
+                        </div>
+                        <div class="input-group">
+                            <label>Table ID</label>
+                            <input type="text" id="profAtTable" placeholder="tbl...">
+                        </div>
+                    </div>
+
+                    <!-- Baserow Config -->
+                    <div class="glass-panel">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3>Baserow</h3>
+                            <button id="runBaserowBtn" class="btn btn-success">▶️ Descargar Canciones</button>
+                        </div>
+                        <div class="input-group" style="margin-top: 15px;">
+                            <label>Token</label>
+                            <input type="password" id="profBwToken" placeholder="Token...">
+                        </div>
+                        <div class="input-group">
+                            <label>Table ID</label>
+                            <input type="text" id="profBwTable" placeholder="12345">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3 style="margin: 0;">Consola de Sincronización</h3>
+                    <button id="cancelSyncBtn" class="btn btn-danger" style="display: none; padding: 5px 15px;">🛑 Cancelar</button>
+                </div>
+                <div class="console-box" id="syncConsole">Selecciona un perfil y ejecuta una sincronización.</div>
+            </div>
+
+            <!-- TAB 3: HERRAMIENTAS -->
+            <div id="tools-tab" class="tab-content">
+
+                <div class="grid-2">
+                    <div class="glass-panel" style="margin-top: 20px; margin-bottom: 20px; text-align: center; border-color: var(--accent);">
+                        <h3>🌐 Sincronización en la Nube (GitHub)</h3>
+                        <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 15px;">Sube automáticamente todas tus carpetas con canciones nuevas y el archivo JSON actualizado directamente a tu repositorio de GitHub para que la aplicación móvil las detecte.</p>
+                        <button id="runGithubBtn" class="btn btn-primary" style="font-size: 1.1rem; padding: 12px 30px;">🚀 Sincronizar y Subir Cambios a GitHub</button>
+                    </div>
+
+                    <div class="glass-panel" style="margin-top: 20px; margin-bottom: 20px; text-align: center; border-color: var(--accent-purple);">
+                        <h3>📁 Explorador de Archivos</h3>
+                        <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 15px;">Abre directamente la carpeta en tu explorador de Windows para ver el archivo JSON de tu base de datos o manipular su contenido localmente.</p>
+                        <div class="input-group" style="text-align: left; margin-bottom: 15px;">
+                            <select id="folderSelectExp" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--border-color); border-radius: 8px;">
+                                <option value="">Cargando carpetas...</option>
+                            </select>
+                        </div>
+                        <button id="openFolderBtn" class="btn btn-primary" style="font-size: 1.1rem; padding: 12px 30px; background: var(--accent-purple);">📂 Abrir Ubicación</button>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3 style="margin: 0;">Consola de Herramientas</h3>
+                    <button id="cancelToolsBtn" class="btn btn-danger" style="display: none; padding: 5px 15px;">🛑 Cancelar</button>
+                </div>
+                <div class="console-box" id="toolsConsole">Esperando acción...</div>
+            </div>
+
+        </main>
+
+        <!-- Toast Notifications Container -->
+        <div id="toast-container"></div>
+    </div>
+
+    <!-- Template for YouTube Task Cards -->
+    <template id="taskTemplate">
+        <div class="task-card">
+            <button class="remove-task" title="Eliminar">&times;</button>
+            <div class="input-group" style="margin-bottom: 15px;">
+                <label>YouTube URL</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" class="task-url" placeholder="https://www.youtube.com/watch?v=..." style="flex: 1;" />
+                    <button type="button" class="btn btn-secondary preview-btn">🎧 Previa</button>
+                </div>
+                <audio class="task-audio" controls style="display:none; width: 100%; margin-top: 10px; height: 35px;"></audio>
+            </div>
+            
+            <div class="grid-2" style="margin-bottom: 15px;">
+                <div class="input-group">
+                    <label>Artista (Opcional)</label>
+                    <input type="text" class="task-artist" placeholder="Ej: Chris Brown" />
+                </div>
+                <div class="input-group">
+                    <label>Título (Opcional)</label>
+                    <input type="text" class="task-title" placeholder="Ej: With You" />
+                </div>
+            </div>
+            
+            <div class="grid-4" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                <div class="input-group">
+                    <label>Inicio (s) <span class="help-icon" data-tooltip="Punto de inicio en segundos.">?</span></label>
+                    <input type="text" class="task-start-m" placeholder="00" value="0" />
+                </div>
+                <div class="input-group">
+                    <label>Duración (s)</label>
+                    <input type="text" class="task-dur-m" placeholder="00" value="30" />
+                </div>
+                <div class="input-group">
+                    <label>Velocidad</label>
+                    <input type="number" class="task-speed" step="0.05" min="0.5" max="2.0" value="1.0" />
+                </div>
+                <div class="input-group">
+                    <label>Fade (In/Out)</label>
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <input type="number" class="task-fade-in" min="0" value="2" style="width: 50%; padding: 0.5rem;" title="Fade In (Seg)"/>
+                        <span style="color:var(--text-muted);">/</span>
+                        <input type="number" class="task-fade-out" min="0" value="2" style="width: 50%; padding: 0.5rem;" title="Fade Out (Seg)"/>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: rgba(56, 189, 248, 0.05); border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.1);">
+                <button type="button" class="toggle-advanced-btn" style="width: 100%; background: transparent; border: none; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; color: var(--accent-cyan); font-weight: bold; font-family: 'Inter', sans-serif;">
+                    <span>🛡️ Ajustes Avanzados (Anti-Copyright)</span>
+                    <span class="toggle-icon" style="transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1); font-size: 0.8rem;">▼</span>
+                </button>
+                <div class="advanced-settings-content" style="padding: 0 15px 15px 15px; display: none; animation: fadeIn 200ms cubic-bezier(0.23, 1, 0.32, 1) forwards;">
+                    <div style="font-size: 0.85rem; color: var(--accent-cyan); margin-bottom: 10px; display: flex; justify-content: flex-end;">
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; color: #fff;">
+                            <input type="checkbox" class="task-pan-dinamico"> Activar Audio 8D
+                        </label>
+                    </div>
+                    <div class="grid-3">
+                        <div class="input-group">
+                            <label>Tono <span class="val-pitch" style="color:var(--accent-cyan); margin-left: auto;">0</span></label>
+                            <input type="range" class="task-pitch" step="0.5" min="-12" max="12" value="0" />
+                        </div>
+                        <div class="input-group">
+                            <label>Bass <span class="val-bass" style="color:var(--accent-cyan); margin-left: auto;">0</span></label>
+                            <input type="range" class="task-bass" step="1" min="0" max="15" value="0" />
+                        </div>
+                        <div class="input-group">
+                            <label>Paneo <span class="val-pan" style="color:var(--accent-cyan); margin-left: auto;">0</span></label>
+                            <input type="range" class="task-pan" step="0.1" min="-1.0" max="1.0" value="0" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script src="{{ url_for('static', filename='script.js') }}?v=2"></script>
+</body>
+</html>
